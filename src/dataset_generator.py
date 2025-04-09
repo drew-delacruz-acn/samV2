@@ -3,6 +3,7 @@ import numpy as np
 import os
 import random
 from tqdm import tqdm
+from pathlib import Path
 
 def generate_video_sequence(video_dir, num_frames, width, height, movement_funcs):
     """
@@ -20,18 +21,32 @@ def generate_video_sequence(video_dir, num_frames, width, height, movement_funcs
     os.makedirs(images_dir, exist_ok=True)
     os.makedirs(masks_dir, exist_ok=True)
 
+    # Also save a sample frame in root directory for quick testing
+    if 'video1' in video_dir and 'train' in video_dir:
+        sample_path = Path(__file__).parent.parent / 'sample_frame.jpg'
+    
     for i in tqdm(range(num_frames), desc=f"Generating {os.path.basename(video_dir)}"):
         frame = np.zeros((height, width, 3), dtype=np.uint8)
         mask = np.zeros((height, width), dtype=np.uint8)
 
         for func in movement_funcs:
-            x, y, radius = func(i)
-            cv2.circle(frame, (x, y), radius, (255, 255, 255), -1)  # White circle
-            cv2.circle(mask, (x, y), radius, 255, -1)               # Foreground in mask
+            if len(func(i)) == 2:  # Compatibility with both function signatures
+                x, y = func(i)
+                r = radius  # Use global radius
+            else:
+                x, y, r = func(i)
+                
+            cv2.circle(frame, (x, y), r, (255, 255, 255), -1)  # White circle
+            cv2.circle(mask, (x, y), r, 255, -1)               # Foreground in mask
 
         cv2.imwrite(os.path.join(images_dir, f'{i:04d}.jpg'), frame)
         cv2.imwrite(os.path.join(masks_dir, f'{i:04d}.png'), mask)
+        
+        # Save the first frame of train/video1 as sample
+        if i == 0 and 'video1' in video_dir and 'train' in video_dir:
+            cv2.imwrite(str(sample_path), frame)
 
+# Movement Functions
 def horizontal_movement(i, width=640, height=480, radius=30):
     """Circle moves horizontally from left to right."""
     x = (50 + i * 5) % (width - radius * 2) + radius
@@ -77,15 +92,23 @@ def generate_random_path(num_frames, width=640, height=480, radius=30, step=10):
         path.append((int(x), int(y), radius))
     return path
 
-def main():
-    """Generate the synthetic dataset."""
-    # Parameters
-    width = 640
-    height = 480
-    num_frames = 100
-    radius = 30
-
-    base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dataset')
+def generate_dataset(base_dir=None, width=640, height=480, num_frames=100, radius=30):
+    """
+    Generate the synthetic dataset with all video types.
+    
+    Args:
+        base_dir (str, optional): Base directory to save the dataset.
+                                 If None, uses default location.
+        width (int): Frame width.
+        height (int): Frame height.
+        num_frames (int): Number of frames per video.
+        radius (int): Radius of the circles.
+    """
+    if base_dir is None:
+        base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'dataset')
+    else:
+        base_dir = Path(base_dir)
+        
     train_dir = os.path.join(base_dir, 'train')
     test_dir = os.path.join(base_dir, 'test')
 
@@ -128,6 +151,19 @@ def main():
     generate_video_sequence(test_video2_dir, num_frames, width, height, movement_funcs_test2)
 
     print("Dummy dataset with three training videos and two test videos generated successfully.")
+    print(f"Dataset location: {base_dir}")
+    print("Sample frame saved as 'sample_frame.jpg' in project root (if training video 1 was generated)")
+
+def main():
+    """Generate the synthetic dataset using default parameters."""
+    # Parameters
+    width = 640
+    height = 480
+    num_frames = 100
+    radius = 30
+
+    # Generate dataset
+    generate_dataset(width=width, height=height, num_frames=num_frames, radius=radius)
 
 if __name__ == "__main__":
     main() 

@@ -1,0 +1,3 @@
+Total frames: 200
+Average IoU: 0.9071
+Average Accuracy: 0.9985

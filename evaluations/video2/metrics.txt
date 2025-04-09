@@ -1,0 +1,2 @@
+Average IoU: 0.8861
+Average Accuracy: 0.9977
