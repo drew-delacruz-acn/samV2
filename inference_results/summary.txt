@@ -1,0 +1,8 @@
+
+Summary of Metrics:
+
+Video 1 Single-Point IoU: 0.0093
+Video 1 Multi-Point IoU: 0.6647
+
+Video 2 Single-Point IoU: 0.0000
+Video 2 Multi-Point IoU: 0.0176

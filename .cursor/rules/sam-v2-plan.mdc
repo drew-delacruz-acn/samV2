@@ -1,0 +1,230 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Below is a Product Requirements Document (PRD) tailored for fine-tuning the Segment Anything Model 2 (SAM2) with a synthetic dataset, designed to be passed to Cursor or any development team for implementation. This document provides a clear, actionable guide with detailed steps, requirements, and deliverables.
+
+---
+
+# Product Requirements Document (PRD): Fine-Tuning SAM2 with a Dummy Dataset
+
+## 1. Overview
+This project aims to fine-tune the Segment Anything Model 2 (SAM2) using a synthetic (dummy) dataset that mimics the object identification challenges found in Marvel movies. The goal is to enhance SAM2’s ability to handle specific difficulties such as fast-moving objects, special effects, unusual shapes, occlusions, and lighting variations. The fine-tuned model will be evaluated on a separate test set from the dummy dataset to confirm improved performance.
+
+This PRD outlines the steps for generating the dataset, setting up the environment, fine-tuning the model, and evaluating the results, ensuring the development team (e.g., Cursor) can execute the task efficiently.
+
+---
+
+## 2. Objectives
+- **Primary Objective**: Fine-tune SAM2 to improve its segmentation performance on a synthetic dataset replicating Marvel movie challenges.
+- **Secondary Objectives**:
+  - Create a synthetic dataset with fictional objects and segmentation masks.
+  - Develop a training pipeline to fine-tune SAM2 using the dataset.
+  - Assess the fine-tuned model’s effectiveness on a test set.
+
+---
+
+## 3. Functional Requirements
+The project is divided into sequential steps, each with specific tasks, tools, and expected outcomes.
+
+### 3.1 Step 1: Research and Understand SAM2
+**Objective**: Understand SAM2’s architecture, inputs, and fine-tuning process.
+
+**Tasks**:
+- Review SAM2’s official documentation or GitHub repository.
+- Confirm input formats (e.g., images, masks, prompts) and fine-tuning support.
+- Identify dependencies (e.g., PyTorch) and hardware needs (e.g., GPU).
+
+**Expected Outcome**:
+- A summary of SAM2’s requirements and capabilities.
+- A list of dependencies and hardware specifications.
+
+---
+
+### 3.2 Step 2: Design and Generate a Dummy Dataset
+**Objective**: Create a synthetic dataset simulating Marvel movie challenges.
+
+**Challenges to Include**:
+- Fast movement (e.g., motion blur)
+- Special effects (e.g., glowing objects)
+- Unusual shapes (e.g., irregular costumes)
+- Occlusions (e.g., overlapping objects)
+- Lighting variations
+
+**Tasks**:
+- **Define Objects**: Start with simple shapes (e.g., circles) that move, then add complexity (e.g., irregular shapes).
+- **Generate Synthetic Videos**:
+  - Use Python with OpenCV or PIL to create videos and masks.
+  - Incorporate challenges like speed, overlap, and blur.
+- **Sample Code**:
+  ```python
+  import cv2
+  import numpy as np
+  import os
+
+  def generate_dummy_video(video_path, mask_dir, num_frames=100, width=640, height=480):
+      fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+      video = cv2.VideoWriter(video_path, fourcc, 30.0, (width, height))
+      os.makedirs(mask_dir, exist_ok=True)
+
+      x, y = width // 4, height // 2  # Initial position
+      radius = 50
+      speed = 5
+
+      for i in range(num_frames):
+          frame = np.zeros((height, width, 3), dtype=np.uint8)
+          cv2.circle(frame, (x, y), radius, (255, 255, 255), -1)
+          video.write(frame)
+
+          mask = np.zeros((height, width), dtype=np.uint8)
+          cv2.circle(mask, (x, y), radius, 255, -1)
+          cv2.imwrite(os.path.join(mask_dir, f'frame_{i:04d}.png'), mask)
+
+          x += speed  # Move object
+          if x > width - radius:
+              x = radius  # Reset position
+
+      video.release()
+  ```
+
+**Expected Outcome**:
+- At least one synthetic video (e.g., `dummy_video.mp4`) and frame-wise masks (e.g., `masks/frame_0000.png`).
+
+---
+
+### 3.3 Step 3: Prepare the Dataset for Training
+**Objective**: Format the synthetic data for SAM2’s training pipeline.
+
+**Tasks**:
+- Verify SAM2’s input requirements (e.g., image-mask pairs).
+- Organize files:
+  - Videos in `videos/`.
+  - Masks in `masks/`.
+- Create a PyTorch Dataset class:
+  ```python
+  from torch.utils.data import Dataset
+  import cv2
+  import os
+
+  class DummyDataset(Dataset):
+      def __init__(self, video_path, mask_dir):
+          self.video = cv2.VideoCapture(video_path)
+          self.mask_dir = mask_dir
+          self.num_frames = int(self.video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+      def __len__(self):
+          return self.num_frames
+
+      def __getitem__(self, idx):
+          self.video.set(cv2.CAP_PROP_POS_FRAMES, idx)
+          ret, frame = self.video.read()
+          frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+          mask_path = os.path.join(self.mask_dir, f'frame_{idx:04d}.png')
+          mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+          return frame, mask  # Add preprocessing if needed
+  ```
+
+**Expected Outcome**:
+- A formatted dataset with a custom PyTorch Dataset class.
+
+---
+
+### 3.4 Step 4: Set Up the Fine-Tuning Environment
+**Objective**: Prepare the development environment.
+
+**Tasks**:
+- Install dependencies:
+  ```bash
+  pip install torch torchvision opencv-python
+  ```
+- Download SAM2’s pre-trained weights from its official source.
+- Confirm GPU access (or adjust for CPU).
+
+**Expected Outcome**:
+- A ready environment with dependencies and SAM2 weights.
+
+---
+
+### 3.5 Step 5: Implement the Fine-Tuning Code
+**Objective**: Develop the fine-tuning script.
+
+**Tasks**:
+- Load SAM2 with pre-trained weights.
+- Set up a DataLoader:
+  ```python
+  from torch.utils.data import DataLoader
+  dataset = DummyDataset('videos/dummy_video.mp4', 'masks/')
+  dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+  ```
+- Define optimizer (e.g., Adam) and loss (e.g., cross-entropy).
+- Write training loop:
+  ```python
+  num_epochs = 10
+  for epoch in range(num_epochs):
+      for images, masks in dataloader:
+          optimizer.zero_grad()
+          outputs = model(images)  # Adjust per SAM2 API
+          loss = compute_loss(outputs, masks)  # Define loss
+          loss.backward()
+          optimizer.step()
+      print(f'Epoch {epoch+1}, Loss: {loss.item()}')
+  ```
+- Note: Adapt `model(images)` and `compute_loss` to SAM2’s API.
+
+**Expected Outcome**:
+- A functional training script.
+
+---
+
+### 3.6 Step 6: Execute the Training
+**Objective**: Run the fine-tuning process.
+
+**Tasks**:
+- Run the script:
+  ```bash
+  python train_sam2.py
+  ```
+- Monitor loss and tweak hyperparameters if needed.
+
+**Expected Outcome**:
+- A fine-tuned SAM2 model.
+
+---
+
+### 3.7 Step 7: Evaluate the Fine-Tuned Model
+**Objective**: Test the model on a separate test set.
+
+**Tasks**:
+- Use or generate a separate synthetic video for testing.
+- Compare predictions to ground truth masks (e.g., IoU, Dice score).
+- Visualize results.
+
+**Expected Outcome**:
+- Performance metrics and visualizations showing improvement.
+
+---
+
+## 4. Non-Functional Requirements
+- **Performance**: Training should finish within hours on a GPU.
+- **Scalability**: Pipeline should support larger datasets.
+- **Usability**: Code must include clear documentation.
+
+---
+
+## 5. Deliverables
+- **Fine-Tuned Model**: SAM2 adapted to the synthetic dataset.
+- **Synthetic Dataset**: Videos and masks.
+- **Code**: Scripts for dataset creation, training, and evaluation.
+- **Documentation**: Report on process, challenges, and results.
+
+---
+
+## 6. Acceptance Criteria
+- Dataset includes at least three challenges (e.g., motion, occlusions).
+- Fine-tuned model outperforms pre-trained SAM2 on test set metrics.
+- Training runs error-free with documented results.
+
+---
+
+This PRD provides a comprehensive roadmap for fine-tuning SAM2. Pass it to Cursor or your team to begin implementation!

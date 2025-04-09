@@ -1,0 +1,213 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Below is a complete solution to generate a dummy dataset consisting of three training videos and two test videos, each featuring moving circles and their corresponding binary segmentation masks. This dataset is designed to help train and test a model, such as SAM2, for video segmentation tasks, with challenges like object movement and occlusions.
+
+---
+
+### Dataset Overview
+
+#### Training Set (3 Videos):
+1. **Video 1**: One circle moving horizontally from left to right.
+2. **Video 2**: One circle moving vertically from top to bottom.
+3. **Video 3**: Two circles moving diagonally (one from top-left to bottom-right, the other from top-right to bottom-left), potentially overlapping to simulate occlusions.
+
+#### Test Set (2 Videos):
+1. **Video 1**: One circle moving in a circular path around the center.
+2. **Video 2**: Two circles moving randomly within the frame, with possible overlaps.
+
+Each video contains 100 frames, with a resolution of 640x480 pixels. For every frame, a binary segmentation mask is generated where the circle(s) are marked as foreground (255) and the background is black (0).
+
+---
+
+### Directory Structure
+The dataset is organized as follows:
+
+```
+dummy_dataset/
+├── train/
+│   ├── video1/
+│   │   ├── images/
+│   │   │   ├── 0000.jpg
+│   │   │   ├── 0001.jpg
+│   │   │   └── ...
+│   │   └── masks/
+│   │       ├── 0000.png
+│   │       ├── 0001.png
+│   │       └── ...
+│   ├── video2/
+│   │   └── ...
+│   └── video3/
+│       └── ...
+└── test/
+    ├── video1/
+    │   └── ...
+    └── video2/
+        └── ...
+```
+
+- **images/**: Contains JPEG frames of the video.
+- **masks/**: Contains PNG files with binary segmentation masks.
+
+---
+
+### Python Code to Generate the Dataset
+
+```python
+import cv2
+import numpy as np
+import os
+import random
+
+def generate_video_sequence(video_dir, num_frames, width, height, movement_funcs):
+    """
+    Generates a sequence of frames and corresponding masks for a video with moving objects.
+    
+    Args:
+        video_dir (str): Directory to save the video frames and masks.
+        num_frames (int): Number of frames in the video.
+        width (int): Width of the frames.
+        height (int): Height of the frames.
+        movement_funcs (list): List of functions defining the movement of each object.
+    """
+    images_dir = os.path.join(video_dir, 'images')
+    masks_dir = os.path.join(video_dir, 'masks')
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(masks_dir, exist_ok=True)
+
+    for i in range(num_frames):
+        frame = np.zeros((height, width, 3), dtype=np.uint8)
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        for func in movement_funcs:
+            x, y = func(i)
+            cv2.circle(frame, (x, y), radius, (255, 255, 255), -1)  # White circle
+            cv2.circle(mask, (x, y), radius, 255, -1)               # Foreground in mask
+
+        cv2.imwrite(os.path.join(images_dir, f'{i:04d}.jpg'), frame)
+        cv2.imwrite(os.path.join(masks_dir, f'{i:04d}.png'), mask)
+
+# Parameters
+width = 640
+height = 480
+num_frames = 100
+radius = 30
+
+base_dir = 'dummy_dataset'
+train_dir = os.path.join(base_dir, 'train')
+test_dir = os.path.join(base_dir, 'test')
+
+os.makedirs(train_dir, exist_ok=True)
+os.makedirs(test_dir, exist_ok=True)
+
+# Movement Functions for Training Set
+def horizontal_movement(i):
+    """Circle moves horizontally from left to right."""
+    x = (50 + i * 5) % width
+    y = height // 2
+    return int(x), y
+
+def vertical_movement(i):
+    """Circle moves vertically from top to bottom."""
+    x = width // 2
+    y = (50 + i * 5) % height
+    return x, int(y)
+
+def diagonal_movement1(i):
+    """Circle moves diagonally from top-left to bottom-right."""
+    x = (50 + i * 3) % width
+    y = (50 + i * 3) % height
+    return int(x), int(y)
+
+def diagonal_movement2(i):
+    """Circle moves diagonally from top-right to bottom-left."""
+    x = (width - 50 - i * 3) % width
+    y = (50 + i * 3) % height
+    return int(x), int(y)
+
+# Movement Functions for Test Set
+center_x, center_y = width // 2, height // 2
+circle_radius = 100
+angle_speed = 0.1
+
+def circular_movement(i):
+    """Circle moves in a circular path around the center."""
+    x = center_x + circle_radius * np.cos(i * angle_speed)
+    y = center_y + circle_radius * np.sin(i * angle_speed)
+    return int(x), int(y)
+
+def generate_random_path(num_frames, width, height, step=10):
+    """Generates a random path for an object within the frame."""
+    path = []
+    x, y = random.randint(0, width-1), random.randint(0, height-1)
+    for _ in range(num_frames):
+        dx, dy = random.randint(-step, step), random.randint(-step, step)
+        x = np.clip(x + dx, 0, width - 1)
+        y = np.clip(y + dy, 0, height - 1)
+        path.append((int(x), int(y)))
+    return path
+
+# Generate Training Videos
+# Video 1: One circle moving horizontally
+train_video1_dir = os.path.join(train_dir, 'video1')
+movement_funcs_train1 = [horizontal_movement]
+generate_video_sequence(train_video1_dir, num_frames, width, height, movement_funcs_train1)
+
+# Video 2: One circle moving vertically
+train_video2_dir = os.path.join(train_dir, 'video2')
+movement_funcs_train2 = [vertical_movement]
+generate_video_sequence(train_video2_dir, num_frames, width, height, movement_funcs_train2)
+
+# Video 3: Two circles moving diagonally
+train_video3_dir = os.path.join(train_dir, 'video3')
+movement_funcs_train3 = [diagonal_movement1, diagonal_movement2]
+generate_video_sequence(train_video3_dir, num_frames, width, height, movement_funcs_train3)
+
+# Generate Test Videos
+# Video 1: One circle moving in a circular path
+test_video1_dir = os.path.join(test_dir, 'video1')
+movement_funcs_test1 = [circular_movement]
+generate_video_sequence(test_video1_dir, num_frames, width, height, movement_funcs_test1)
+
+# Video 2: Two circles moving randomly
+test_video2_dir = os.path.join(test_dir, 'video2')
+path1 = generate_random_path(num_frames, width, height)
+path2 = generate_random_path(num_frames, width, height)
+movement_funcs_test2 = [lambda i: path1[i], lambda i: path2[i]]
+generate_video_sequence(test_video2_dir, num_frames, width, height, movement_funcs_test2)
+
+print("Dummy dataset with three training videos and two test videos generated successfully.")
+```
+
+---
+
+### How It Works
+
+1. **Requirements**:
+   - Python libraries: `cv2` (OpenCV), `numpy`, `os`, `random`.
+   - Install OpenCV if not already installed: `pip install opencv-python`.
+
+2. **Execution**:
+   - Run the script to create the `dummy_dataset/` directory with the specified structure.
+   - Each video’s frames are saved as JPEG images (e.g., `0000.jpg`), and masks as PNG files (e.g., `0000.png`).
+
+3. **Details**:
+   - **Frames**: 100 per video, 640x480 pixels, black background, white circles.
+   - **Masks**: Binary (0 for background, 255 for foreground), aligned with each frame.
+   - **Movement**: Predefined patterns ensure variety and test generalization.
+
+4. **Output**:
+   - Three training examples (`video1`, `video2`, `video3`) in `train/`.
+   - Two test examples (`video1`, `video2`) in `test/`.
+
+---
+
+### Usage Instructions
+
+- **Training**: Use the `train/` directory to fine-tune your model (e.g., SAM2) by loading the image-mask pairs.
+- **Testing**: Evaluate the model’s performance on the `test/` directory, which includes unseen movement patterns.
+- **Customization**: Adjust `width`, `height`, `num_frames`, `radius`, or movement functions to suit your needs.
+
+This dataset provides a simple yet effective way to train and test a segmentation model on moving objects, with the added complexity of occlusions in some videos, fulfilling your request for three training and two test set examples.
