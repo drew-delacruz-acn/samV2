@@ -1,0 +1,6 @@
+
+Summary of Metrics:
+
+video1 IoU: 0.0000
+video1 Dice: 0.0000
+

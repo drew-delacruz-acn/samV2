@@ -1,0 +1,18 @@
+{
+    "overall": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "iou": 0.0,
+        "dice": 0.0
+    },
+    "per_video": {
+        "video1": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "iou": 0.0,
+            "dice": 0.0
+        }
+    }
+}
