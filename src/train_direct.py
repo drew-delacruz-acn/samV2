@@ -275,8 +275,8 @@ if __name__ == "__main__":
                         help='Image size for training')
     parser.add_argument('--batch_size', type=int, default=8,
                         help='Batch size for training')
-    parser.add_argument('--num_workers', type=int, default=4,
-                        help='Number of workers for data loading')
+    parser.add_argument('--num_workers', type=int, default=0, # Changed default from 4 to 0 for Windows compatibility
+                        help='Number of workers for data loading (set to 0 for Windows compatibility)')
     parser.add_argument('--learning_rate', type=float, default=1e-4,
                         help='Learning rate')
     parser.add_argument('--num_epochs', type=int, default=20,

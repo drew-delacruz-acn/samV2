@@ -164,4 +164,54 @@ samV2/
 
 ## Contributing
 
-[Add contribution guidelines here] 
+[Add contribution guidelines here]
+
+## Running on Windows (CPU Only)
+
+These instructions guide you through setting up and running the SAM2 fine-tuning process on a Windows machine using only the CPU. Note that training on a CPU will be significantly slower than using a GPU.
+
+### 1. Prerequisites
+- **Python:** Ensure you have Python installed. You can download it from [python.org](https://www.python.org/). Make sure to check the option "Add Python to PATH" during installation.
+- **Git:** Install Git for Windows from [git-scm.com](https://git-scm.com/) to clone the repository.
+
+### 2. Setup Steps
+1.  **Clone the Repository:**
+    Open Command Prompt (cmd) or PowerShell and run:
+    ```bash
+    git clone <repository_url>
+    cd <repository_directory>
+    ```
+    (Replace `<repository_url>` and `<repository_directory>` with the actual URL and folder name).
+
+2.  **Create a Virtual Environment:**
+    It's highly recommended to use a virtual environment:
+    ```bash
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
+    You should see `(venv)` appear at the beginning of your command prompt line.
+
+3.  **Install Dependencies (CPU Version):**
+    Install the required Python packages. Crucially, install the CPU-specific version of PyTorch:
+    ```bash
+    pip install --upgrade pip
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    pip install -r requirements.txt
+    ```
+    *Note: The `requirements.txt` might contain a GPU-specific version of PyTorch. Installing the CPU version first might resolve this, but you may need to manually edit `requirements.txt` to remove any specific `torch` lines if conflicts occur.*
+
+### 3. Prepare Dataset and Configuration
+1.  **Dataset:** Ensure you have the dataset (e.g., the dummy dataset) available. Follow the instructions in [Generating the Dummy Dataset](#generating-the-dummy-dataset) (or link to relevant doc) if you haven't created it yet.
+2.  **Configuration:**
+    *   Locate the relevant training configuration file (e.g., within `sam2_configs/` or specified via command-line).
+    *   Modify the configuration to explicitly use the CPU. This often involves setting a `device` parameter to `"cpu"`. For example, if using `src/train_sam2_official.py`, you might need to pass a command-line argument like `--device cpu` or modify a configuration file loaded by the script. Check the script's argument parser or associated config files for the exact parameter name.
+
+### 4. Run Fine-Tuning
+Execute the training script, ensuring it's configured to use the CPU. The exact command will depend on the specific training script and its arguments. For example:
+```bash
+python src/train_sam2_official.py --config-name <your_config_file> --device cpu [other_arguments...]
+```
+*(Replace `<your_config_file>` and `[other_arguments...]` as needed)*
+
+### 5. Performance Note
+Training deep learning models like SAM2 is computationally intensive. Expect the fine-tuning process to take a very long time on a CPU compared to a GPU. This setup is primarily for testing or environments where a GPU is unavailable. 
